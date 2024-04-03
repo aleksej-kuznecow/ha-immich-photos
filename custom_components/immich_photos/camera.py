@@ -12,7 +12,7 @@ from pprint import pformat
 import homeassistant.helpers.config_validation as cv
 from homeassistant.components.camera import (PLATFORM_SCHEMA, Camera, CameraEntityDescription)
 
-from homeassistant.const import CONF_URL, CONF_API_KEY
+from homeassistant.const import CONF_URL, CONF_API_KEY, CONF_DELAY
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
@@ -23,6 +23,7 @@ _LOGGER = logging.getLogger("immich_photos")
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_URL): cv.string,
     vol.Required(CONF_API_KEY): cv.string,
+    vol.Required(CONF_DELAY): cv.string,
 })
 
 CAMERA_TYPE = CameraEntityDescription(
@@ -42,7 +43,8 @@ def setup_platform(
 
     camera_config = {
         "url": config[CONF_URL],
-        "api_key": config[CONF_API_KEY]
+        "api_key": config[CONF_API_KEY],
+        "delay": config[CONF_DELAY],
     }
 
     add_entities([ImmichPhotosCamera(camera_config)])
@@ -59,7 +61,7 @@ class ImmichPhotosCamera(Camera):
         self._camera.get_next_album()
         self.entity_description = CAMERA_TYPE
         self._attr_native_value = "Cover photo"
-        self._attr_frame_interval = 10
+        self._attr_frame_interval = int(camera_config["delay"])
         self._attr_is_on = True
         self._attr_is_recording = False
         self._attr_is_streaming = False

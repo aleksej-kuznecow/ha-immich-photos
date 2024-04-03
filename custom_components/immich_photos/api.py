@@ -1,10 +1,11 @@
-import requests
+from requests import request
 import json
 from random import randint
 from .api_types import Album, Media, MediaMetadata, MediaMetadataPhoto, MediaMetadataVideo
 
 
-class ServerManager:
+class ImmichManager:
+    """" Immich API class """
     url: str
     api_key: str
 
@@ -13,6 +14,7 @@ class ServerManager:
         self.api_key = api_key
 
     def ping(self) -> bool:
+        """ Check if API available """
         api_path = "/api/server-info/ping"
 
         payload = {}
@@ -22,25 +24,16 @@ class ServerManager:
         }
         result = False
         try:
-            if json.loads(requests.request("GET", self.url + api_path, headers=headers,
-                                           data=payload).text)["res"] == "pong":
+            if json.loads(request("GET", self.url + api_path, headers=headers,
+                                  data=payload).text)["res"] == "pong":
                 result = True
         except Exception:
             result = False
 
         return result
 
-
-class AlbumManager:
-    url: str
-    api_key: str
-
-    def __init__(self, url: str, api_key: str):
-        self.url = url
-        self.api_key = api_key
-
     def create_album_from_json(self, json_str: str) -> Album:
-        """"Create Album object by JSON string"""
+        """" Create Album object by JSON string """
         try:
             request = json_str
 
@@ -52,7 +45,7 @@ class AlbumManager:
             return Album()
 
     def get_all_albums(self, shared=False) -> list:
-        """"Return a list of all Albums"""
+        """" Return a list of all Albums """
         api_path = "/api/album"
         if shared:
             api_path = api_path + "?shared=true"
@@ -63,10 +56,10 @@ class AlbumManager:
             'x-api-key': self.api_key
         }
         result = []
-        for _album in json.loads(requests.request("GET",
-                                                  self.url + api_path,
-                                                  headers=headers,
-                                                  data=payload).text):
+        for _album in json.loads(request("GET",
+                                         self.url + api_path,
+                                         headers=headers,
+                                         data=payload).text):
             result.append(self.create_album_from_json(_album))
         return result
 
@@ -76,21 +69,6 @@ class AlbumManager:
         random_album_number = randint(1, len(all_albums))
 
         return all_albums[random_album_number - 1]
-
-    def get_albums_count(self, shared=False) -> int:
-        """ Return number of albums based on incoming parameter shared: True - shared, False - owned.
-            By default - owned """
-        _shared = 'shared'
-        if not shared:
-            _shared = 'owned'
-
-        api_path = "/api/album/count"
-        payload = {}
-        headers = {
-            'Accept': 'application/json',
-            'x-api-key': self.api_key
-        }
-        return json.loads(requests.request("GET", self.url + api_path, headers=headers, data=payload).text)[_shared]
 
     def get_album_info(self, album_id: str) -> Album:
         """Get Album info by ID"""
@@ -102,19 +80,10 @@ class AlbumManager:
             'Accept': 'application/json',
             'x-api-key': self.api_key
         }
-        return self.create_album_from_json(json.loads(requests.request("GET",
-                                                                       self.url + api_path,
-                                                                       headers=headers,
-                                                                       data=payload).text))
-
-
-class MediaManager:
-    url: str
-    api_key: str
-
-    def __init__(self, url: str, api_key: str):
-        self.url = url
-        self.api_key = api_key
+        return self.create_album_from_json(json.loads(request("GET",
+                                                              self.url + api_path,
+                                                              headers=headers,
+                                                              data=payload).text))
 
     def create_media_from_json(self, json_str: str) -> Media:
         """"Creates Media object by JSON string"""
@@ -147,7 +116,7 @@ class MediaManager:
             return Media()
 
     def get_album_media_items(self, album_id: str) -> list:
-        """"Get list of all Media in an Album"""
+        """" Get list of all Media in the Album """
         if album_id is None:
             return []
 
@@ -158,15 +127,15 @@ class MediaManager:
             'x-api-key': self.api_key
         }
         result = []
-        for _media in json.loads(requests.request("GET",
-                                                  self.url + api_path,
-                                                  headers=headers,
-                                                  data=payload).text)["assets"]:
+        for _media in json.loads(request("GET",
+                                         self.url + api_path,
+                                         headers=headers,
+                                         data=payload).text)["assets"]:
             result.append(self.create_media_from_json(_media))
         return result
 
     def get_media_info(self, asset_id: str) -> Media:
-        """"Get media info"""
+        """" Get media info """
         if asset_id is None:
             return Media()
         api_path = "/api/asset/" + asset_id
@@ -175,10 +144,10 @@ class MediaManager:
             'Accept': 'application/json',
             'x-api-key': self.api_key
         }
-        return self.create_media_from_json(json.loads(requests.request("GET",
-                                                                       self.url + api_path,
-                                                                       headers=headers,
-                                                                       data=payload).text))
+        return self.create_media_from_json(json.loads(request("GET",
+                                                              self.url + api_path,
+                                                              headers=headers,
+                                                              data=payload).text))
 
     def get_random_media(self, album_id: str) -> Media:
         """"Returns random media from an Album"""
@@ -197,4 +166,4 @@ class MediaManager:
             'Accept': 'application/octet-stream',
             'x-api-key': self.api_key
         }
-        return requests.request("GET", self.url + api_path, headers=headers, data=payload).content
+        return request("GET", self.url + api_path, headers=headers, data=payload).content

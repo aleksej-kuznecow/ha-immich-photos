@@ -1,8 +1,4 @@
-# https://www.home-assistant.io/integrations/default_config/
-default_config:
-
-# https://www.home-assistant.io/integrations/logger/
-logger:
-  default: info
-  logs:
-    custom_components.integration_blueprint: debug
+camera:
+  - platform: immich_photos
+    url: "any.valid.url.with.immich.api.available"
+    api_key: "ani.valid.api.key.provided.by.immich"

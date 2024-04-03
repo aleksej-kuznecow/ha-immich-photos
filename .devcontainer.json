@@ -1,16 +1,10 @@
 {
     "name": "aleksej-kuznecow/ha-immich-photos",
-    "image": "mcr.microsoft.com/devcontainers/python:3.11-bullseye",
+    "image": "mcr.microsoft.com/devcontainers/python:0-3.11-bullseye",
     "postCreateCommand": "scripts/setup",
     "forwardPorts": [
         8123
     ],
-    "portsAttributes": {
-        "8123": {
-            "label": "Home Assistant",
-            "onAutoForward": "notify"
-        }
-    },
     "customizations": {
         "vscode": {
             "extensions": [
@@ -37,6 +31,6 @@
     },
     "remoteUser": "vscode",
     "features": {
-        "ghcr.io/devcontainers/features/rust:1": {}
+        "rust": "latest"
     }
 }

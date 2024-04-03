@@ -1,35 +1,27 @@
-name: "Release"
-
 on:
   release:
-    types:
-      - "published"
-
-permissions: {}
+    types: [published]
 
 jobs:
-  release:
-    name: "Release"
-    runs-on: "ubuntu-latest"
-    permissions:
-      contents: write
+  build:
+    runs-on: ubuntu-latest
+
     steps:
-      - name: "Checkout the repository"
-        uses: "actions/checkout@v4.1.0"
+      - uses: actions/checkout@v3
 
-      - name: "Adjust version number"
-        shell: "bash"
+      - name: Get version
+        id: version
+        uses: home-assistant/actions/helpers/version@master
+
+      - name: Patch manifest and zip
         run: |
-          yq -i -o json '.version="${{ github.event.release.tag_name }}"' \
-            "${{ github.workspace }}/custom_components/integration_blueprint/manifest.json"
+          sed -i 's/v0.0.0/${{ steps.version.outputs.version }}/' custom_components/immich_photos/manifest.json
 
-      - name: "ZIP the integration directory"
-        shell: "bash"
-        run: |
-          cd "${{ github.workspace }}/custom_components/integration_blueprint"
-          zip integration_blueprint.zip -r ./
-
-      - name: "Upload the ZIP file to the release"
-        uses: softprops/action-gh-release@v0.1.15
+          cd custom_components/immich_photos/
+          zip ../../immich_photos.zip ./* translations/* -x '.*'
+      - uses: svenstaro/upload-release-action@v2
         with:
-          files: ${{ github.workspace }}/custom_components/integration_blueprint/integration_blueprint.zip
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: immich_photos.zip
+          tag: ${{ github.ref }}
+          overwrite: true

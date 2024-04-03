@@ -4,11 +4,14 @@
   "codeowners": [
     "@aleksej-kuznecow"
   ],
-  "dependencies": [],
+  "dependencies": [
+    "application_credentials"
+  ],
   "documentation": "https://github.com/aleksej-kuznecow/ha-immich-photos",
-  "integration_type": "service",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/aleksej-kuznecow/ha-immich-photos/issues",
-  "requirements": [],
-  "version": "0.1.0"
+  "requirements": [
+    "pillow"
+  ],
+  "version": "v0.1.0"
 }

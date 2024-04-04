@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import logging
 
-from .immich_photos import Immich_Photos
+from .immich_photos import ImmichPhotos
 import voluptuous as vol
 
 from pprint import pformat
@@ -12,7 +12,7 @@ from pprint import pformat
 import homeassistant.helpers.config_validation as cv
 from homeassistant.components.camera import (PLATFORM_SCHEMA, Camera, CameraEntityDescription)
 
-from homeassistant.const import CONF_URL, CONF_API_KEY, CONF_DELAY
+from homeassistant.const import CONF_URL, CONF_API_KEY
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
@@ -23,7 +23,6 @@ _LOGGER = logging.getLogger("immich_photos")
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_URL): cv.string,
     vol.Required(CONF_API_KEY): cv.string,
-    vol.Required(CONF_DELAY): cv.string,
 })
 
 CAMERA_TYPE = CameraEntityDescription(
@@ -43,25 +42,24 @@ def setup_platform(
 
     camera_config = {
         "url": config[CONF_URL],
-        "api_key": config[CONF_API_KEY],
-        "delay": config[CONF_DELAY],
+        "api_key": config[CONF_API_KEY]
     }
 
     add_entities([ImmichPhotosCamera(camera_config)])
 
 
 class ImmichPhotosCamera(Camera):
-    _camera: Immich_Photos
+    _camera: ImmichPhotos
 
     def __init__(self, camera_config) -> None:
         """Initialize an ImmichPhotos."""
         super().__init__()
-        self._camera = Immich_Photos(url=camera_config["url"],
-                                     api_key=camera_config["api_key"])
+        self._camera = ImmichPhotos(url=camera_config["url"],
+                                    api_key=camera_config["api_key"])
         self._camera.get_next_album()
         self.entity_description = CAMERA_TYPE
         self._attr_native_value = "Cover photo"
-        self._attr_frame_interval = int(camera_config["delay"])
+        self._attr_frame_interval = 10
         self._attr_is_on = True
         self._attr_is_recording = False
         self._attr_is_streaming = False

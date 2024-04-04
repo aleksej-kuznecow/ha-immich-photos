@@ -1,8 +1,10 @@
-from requests import request
+import requests
 import json
 from random import randint
-from .api_types import Album, Media, MediaMetadata, MediaMetadataPhoto, MediaMetadataVideo
+import logging
+from .api_types import Album, Media, MediaMetadata
 
+_LOGGER = logging.getLogger("immich_photos")
 
 class ImmichManager:
     """" Immich API class """
@@ -24,10 +26,12 @@ class ImmichManager:
         }
         result = False
         try:
-            if json.loads(request("GET", self.url + api_path, headers=headers,
-                                  data=payload).text)["res"] == "pong":
+            if json.loads(requests.request("GET", self.url + api_path, headers=headers,
+                                           data=payload).text)["res"] == "pong":
                 result = True
-        except Exception:
+        except Exception as err:
+            _LOGGER.error("Error connecting to the API: %s", err)
+
             result = False
 
         return result
@@ -56,10 +60,10 @@ class ImmichManager:
             'x-api-key': self.api_key
         }
         result = []
-        for _album in json.loads(request("GET",
-                                         self.url + api_path,
-                                         headers=headers,
-                                         data=payload).text):
+        for _album in json.loads(requests.request("GET",
+                                                  self.url + api_path,
+                                                  headers=headers,
+                                                  data=payload).text):
             result.append(self.create_album_from_json(_album))
         return result
 
@@ -80,31 +84,22 @@ class ImmichManager:
             'Accept': 'application/json',
             'x-api-key': self.api_key
         }
-        return self.create_album_from_json(json.loads(request("GET",
-                                                              self.url + api_path,
-                                                              headers=headers,
-                                                              data=payload).text))
+        return self.create_album_from_json(json.loads(requests.request("GET",
+                                                                       self.url + api_path,
+                                                                       headers=headers,
+                                                                       data=payload).text))
 
     def create_media_from_json(self, json_str: str) -> Media:
         """"Creates Media object by JSON string"""
         try:
             request = json_str
-            _photo = MediaMetadataPhoto()
-            _video = MediaMetadataVideo()
-            if request['type'] == 'IMAGE':
-                _photo['focalLength'] = request['exifInfo']['focalLength']
-                _photo['apertureFNumber'] = request['exifInfo']['fNumber']
-                _photo['isoEquivalent'] = request['exifInfo']['iso']
-                _photo['exposureTime'] = request['exifInfo']['exposureTime']
 
             _mediaMetaData = MediaMetadata(creationTime=request['fileCreatedAt'],
                                            width=request['exifInfo']['exifImageWidth'],
                                            height=request['exifInfo']['exifImageHeight'],
                                            orientation=request['exifInfo']['orientation'],
                                            cameraMake=request['exifInfo']['make'],
-                                           cameraModel=request['exifInfo']['model'],
-                                           photo=_photo,
-                                           video=_video
+                                           cameraModel=request['exifInfo']['model']
                                            )
             return Media(id=request['id'],
                          mimeType=request['type'],
@@ -127,10 +122,10 @@ class ImmichManager:
             'x-api-key': self.api_key
         }
         result = []
-        for _media in json.loads(request("GET",
-                                         self.url + api_path,
-                                         headers=headers,
-                                         data=payload).text)["assets"]:
+        for _media in json.loads(requests.request("GET",
+                                                  self.url + api_path,
+                                                  headers=headers,
+                                                  data=payload).text)["assets"]:
             result.append(self.create_media_from_json(_media))
         return result
 
@@ -144,10 +139,10 @@ class ImmichManager:
             'Accept': 'application/json',
             'x-api-key': self.api_key
         }
-        return self.create_media_from_json(json.loads(request("GET",
-                                                              self.url + api_path,
-                                                              headers=headers,
-                                                              data=payload).text))
+        return self.create_media_from_json(json.loads(requests.request("GET",
+                                                                       self.url + api_path,
+                                                                       headers=headers,
+                                                                       data=payload).text))
 
     def get_random_media(self, album_id: str) -> Media:
         """"Returns random media from an Album"""
@@ -166,4 +161,4 @@ class ImmichManager:
             'Accept': 'application/octet-stream',
             'x-api-key': self.api_key
         }
-        return request("GET", self.url + api_path, headers=headers, data=payload).content
+        return requests.request("GET", self.url + api_path, headers=headers, data=payload).content

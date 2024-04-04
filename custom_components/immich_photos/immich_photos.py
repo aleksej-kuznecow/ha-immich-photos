@@ -1,26 +1,35 @@
+import io
+from PIL import Image
+
 from .api_types import Album, Media
 from .api import ImmichManager
+from .const import (ORIENTATION_NORMAL,
+                    ORIENTATION_TOP_TO_LEFT,
+                    ORIENTATION_TOP_TO_RIGHT,
+                    ORIENTATION_UPSIDE_DOWN)
+from .const import (MEDIA_TYPE_IMAGE, MEDIA_TYPE_VIDEO)
 
 import logging
 
-LOGGER = logging.getLogger(__name__)
+_LOGGER = logging.getLogger("immich_photos")
 
-class Immich_Photos:
+
+class ImmichPhotos:
+    """ Immich album and media downloader"""
     _album: Album
     _media: Media
-    _manager: ImmichManager
 
-    def __init__(self, url: str, api_key: str, shared=True) -> None:
+    def __init__(self, url: str, api_key: str, shared=True, crop=True) -> None:
         self._url = url
         self._api_key = api_key
         self._shared = shared
+        self._crop = crop
         self._album = Album()
         self._media = Media()
-        self._manager = ImmichManager(url=self._url, api_key=self._api_key)
 
     def get_next_album(self) -> None:
         """ Get next album. By default random and from only shared albums """
-        self._album = self._manager.get_random_album(shared=self._shared)
+        self._album = ImmichManager(url=self._url, api_key=self._api_key).get_random_album(shared=self._shared)
 
     def get_next_media(self) -> None:
         """ Get next media from album. By default random """
@@ -28,8 +37,55 @@ class Immich_Photos:
             self.get_next_album()
 
         if self._album != {}:
-            self._media = self._manager.get_random_media(album_id=self._album['id'])
+            self._media = ImmichManager(url=self._url, api_key=self._api_key).get_random_media(
+                album_id=self._album['id'])
 
-    def get_media_content(self) -> bytes:
+    def get_media_content(self, media_id: str | None = None) -> bytes | None:
         """ Get media raw content """
-        return self._manager.get_media_content(asset_id=self._media['id'])
+
+        def image2bytes(image: Image) -> bytes:
+            with io.BytesIO() as media_bytes:
+                image.save(media_bytes, "JPEG")
+                return media_bytes.getvalue()
+
+        def rotate_media(media: bytes, orientation: str | None) -> bytes:
+            """ Rotate media"""
+            _orientation = orientation or ORIENTATION_NORMAL
+            _angle = 0
+            if _orientation == ORIENTATION_TOP_TO_LEFT:
+                _angle = 270
+            elif _orientation == ORIENTATION_UPSIDE_DOWN:
+                _angle = 180
+            elif _orientation == ORIENTATION_TOP_TO_RIGHT:
+                _angle = 90
+
+            return image2bytes(Image.open(io.BytesIO(media)).rotate(_angle))
+
+        def resize_media(media: bytes, width: int | None = None, height: int | None = None) -> bytes:
+            """ Resize media"""
+            _width = width or 1024
+            _height = height or 512
+
+            return image2bytes(Image.open(io.BytesIO(media)).resize(size=(_width, _height)))
+
+        _media_id = media_id or self._media['id']
+        _orientation = None
+        if self._media != {}:
+            _orientation = self._media['mediaMetaData']['orientation']
+
+        _media = ImmichManager(url=self._url, api_key=self._api_key).get_media_content(asset_id=_media_id)
+
+        if self._media['mimeType'] == MEDIA_TYPE_IMAGE:
+            # Try to resize
+            #try:
+            #    _media = resize_media(media=_media)
+            #except Exception as err:
+            #    _LOGGER.error("Unable to rotate media: %s, %s", err, _media_id)
+
+            # Try to rotate
+            try:
+                _media = rotate_media(media=_media, orientation=_orientation)
+            except Exception as err:
+                _LOGGER.error("Unable to rotate media: %s, %s", err, _media_id)
+
+        return _media

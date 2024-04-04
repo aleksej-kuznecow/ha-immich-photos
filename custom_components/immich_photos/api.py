@@ -6,12 +6,13 @@ from .api_types import Album, Media, MediaMetadata
 
 _LOGGER = logging.getLogger("immich_photos")
 
+
 class ImmichManager:
     """" Immich API class """
     url: str
     api_key: str
 
-    def __init__(self, url: str, api_key: str):
+    def __init__(self, url: str, api_key: str) -> None:
         self.url = url
         self.api_key = api_key
 

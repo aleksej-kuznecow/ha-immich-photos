@@ -2,3 +2,8 @@ camera:
   - platform: immich_photos
     url: "any.valid.url.with.immich.api.available"
     api_key: "ani.valid.api.key.provided.by.immich"
+    update_interval:
+      album: 300
+      image: 30
+    shared_albums: True
+

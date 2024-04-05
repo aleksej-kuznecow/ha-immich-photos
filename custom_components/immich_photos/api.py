@@ -44,7 +44,7 @@ def create_media_from_json(request: dict) -> Media:
         return Media()
 
 
-class ImmichManager:
+class ImmichAPI:
     """" Immich API class """
 
     def __init__(self, url: str, api_key: str) -> None:

@@ -2,15 +2,19 @@
 from __future__ import annotations
 
 import io
+from datetime import datetime, timedelta
 from PIL import Image
 
 from .api_types import Album, Media
-from .api import ImmichManager
+from .api import ImmichAPI
 from .const import (ORIENTATION_NORMAL,
                     ORIENTATION_TOP_TO_LEFT,
                     ORIENTATION_TOP_TO_RIGHT,
                     ORIENTATION_UPSIDE_DOWN,
-                    MEDIA_TYPE_IMAGE)
+                    UPDATE_INTERVAL_ALBUM,
+                    UPDATE_INTERVAL_IMAGE)
+
+from homeassistant.config_entries import ConfigEntry
 
 import logging
 
@@ -47,62 +51,75 @@ def resize_media(media: bytes, width: int | None = None, height: int | None = No
 
 
 class ImmichPhotos:
-    """ Immich album and media downloader"""
-    _album: Album
-    _media: Media
+    """ Immich album and media downloader """
+    album: Album = Album()
+    media: Media = Media()
+    current_media_timestamp: datetime | None = None
+    current_album_timestamp: datetime | None = None
 
-    def __init__(self, url: str, api_key: str, shared=True, crop=True) -> None:
-        self._url = url
-        self._api_key = api_key
-        self._shared = shared
-        self._crop = crop
-        self._album = Album()
-        self._media = Media()
-
-    @property
-    def album(self):
-        return self._album
-
-    @property
-    def media(self):
-        return self._media
+    def __init__(self, config: ConfigEntry) -> None:
+        self._url = config['url']
+        self._api_key = config['api_key']
+        self._shared = config['shared_albums']
+        self._update_interval: tuple = (config['update_interval']['album'], config['update_interval']['image'])
 
     async def get_next_album(self) -> None:
         """ Get next album. By default, get random album and only from shared albums """
-        self._album = await ImmichManager(url=self._url, api_key=self._api_key).get_random_album(shared=self._shared)
+        self.album = await ImmichAPI(url=self._url, api_key=self._api_key).get_random_album(shared=self._shared)
 
     async def get_next_media(self) -> None:
         """ Get next media from album. By default random """
-        if self._album == {}:
+        if self.album == {}:
+            _LOGGER.error("Album is not defined")
+        else:
+            self.media = await (
+                ImmichAPI(url=self._url, api_key=self._api_key).get_random_media(album_id=self.album['id']))
+
+    async def download(self, size: tuple | None) -> None:
+        """ Download image """
+        _current_media = await (ImmichAPI(url=self._url,
+                                          api_key=self._api_key)
+                                .get_media_content(media_id=self.media['id']))
+
+        # Try to rotate
+        try:
+            _orientation = None
+            if self.media != {}:
+                _orientation = self.media['mediaMetaData']['orientation']
+            _current_media = rotate_media(media=_current_media, orientation=_orientation)
+        except Exception as err:
+            _LOGGER.error("Unable to rotate media: %s, %s", err, self.media['id'])
+
+        return _current_media
+
+    async def update_album(self) -> None:
+        """ Update album. If update interval equal 0 sec then update each time """
+        if self.current_album_timestamp is None:
             await self.get_next_album()
+            self.current_album_timestamp = datetime.now()
+            _LOGGER.debug("First album %s", self.album['id'])
+        else:
+            if (datetime.now() - self.current_album_timestamp) > self._update_interval[UPDATE_INTERVAL_ALBUM]:
+                await self.get_next_album()
+                self.current_album_timestamp = datetime.now()
+                _LOGGER.debug("Album %s", self.album['id'])
 
-        if self._album != {}:
-            self._media = await (
-                ImmichManager(url=self._url, api_key=self._api_key).get_random_media(album_id=self._album['id']))
+    async def update_media(self, size: tuple | None) -> None:
+        """ Update media. If update interval not defined then do not update (this parameter is mandatory! """
+        if self.current_media_timestamp is None:
+            await self.get_next_media()
+            self.current_media_timestamp = datetime.now()
+            _LOGGER.debug("First media %s", self.media['id'])
+        else:
+            if (datetime.now() - self.current_media_timestamp) > self._update_interval[UPDATE_INTERVAL_IMAGE]:
+                await self.get_next_media()
+                self.current_media_timestamp = datetime.now()
+                _LOGGER.debug("Media %s", self.media['id'])
 
-    async def get_media_content(self,
-                                width: int | None = None,
-                                height: int | None = None,
-                                media_id: str | None = None) -> bytes | None:
-        """ Get media raw content """
-        _media_id = media_id or self._media['id']
-        _orientation = None
-        if self._media != {}:
-            _orientation = self._media['mediaMetaData']['orientation']
+    async def refresh(self, size: tuple | None) -> None:
+        """ Refresh data """
+        await self.update_album()
+        await self.update_media(size)
 
-        _media = await ImmichManager(url=self._url, api_key=self._api_key).get_media_content(media_id=_media_id)
+        return await self.download(size)
 
-        if self._media['mimeType'] == MEDIA_TYPE_IMAGE:
-            # Try to resize
-            # try:
-            #    _media = resize_media(media=_media, width=width, height=width)
-            # except Exception as err:
-            #    _LOGGER.error("Unable to rotate media: %s, %s", err, _media_id)
-
-            # Try to rotate
-            try:
-                _media = rotate_media(media=_media, orientation=_orientation)
-            except Exception as err:
-                _LOGGER.error("Unable to rotate media: %s, %s", err, _media_id)
-
-        return _media

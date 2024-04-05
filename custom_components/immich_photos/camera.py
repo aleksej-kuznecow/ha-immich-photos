@@ -17,6 +17,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
+
 _LOGGER = logging.getLogger("immich_photos")
 
 # Validation of the user's configuration
@@ -66,19 +67,22 @@ class ImmichPhotosCamera(Camera):
         self._attr_unique_id = f"ID-media"
         self._attr_extra_state_attributes = {}
 
-    def camera_image(
-            self, width: int | None = None, height: int | None = None
+    async def async_camera_image(
+        self, width: int | None = None, height: int | None = None
     ) -> bytes | None:
-        """Return bytes of camera image."""
-        self._camera.get_next_album()
-        self._camera.get_next_media()
-        return self._camera.get_media_content()
+        """Return a still image response from the camera."""
+        await self._camera.get_next_album()
+        await self._camera.get_next_media()
+        image = await self._camera.get_media_content(width, height)
+        if image is None:
+            _LOGGER.warning("No media selected for Immich Photo")
+            return None
+        return image
 
-    def update(self) -> None:
+    async def async_update(self) -> None:
         """Update the entity.
 
         Only used by the generic entity update service.
         """
-        self._camera.get_next_album()
-        self._camera.get_next_media()
-        self._camera.get_media_content()
+        return await self._camera.get_media_content()
+

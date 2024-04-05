@@ -1,3 +1,4 @@
+""" API types for integration """
 from typing import TypedDict, Optional
 
 

@@ -29,16 +29,23 @@ Platform | Description
 
 ## Configuration
 1. Add the part of configuration provided below to your `configuration.yaml`
-1. Replace `any.valid.url.with.immich.api.available` in the added text with the valid URL of your Immich.
-1. Replace `ani.valid.api.key.provided.by.immich` in the added text with the valid API key peovided by your Immich (get or add it here in your Immich: Accountsettings/API Keys).
+1. Replace `any.valid.url.with.immich.api.available` in the configuration parameter `url` with the valid URL of your Immich.
+1. Replace `ani.valid.api.key.provided.by.immich` in the parameter `api_key` with the valid API key peovided by your Immich (get or add it in your Immich here: `Account settings/API Keys`).
+1. Set the desired update interval in seconds for albums in `update_interval/album` parameter. In case you set it equal 0 album wil be randomly updated on each image update.
+1. Set the desired update interval in seconds for image in `update_interval/image` parameter.
+1. The configuration parameter `shared_albums` tells foe component which types of album it should proceed: True - shared, False - owned
 1. Again restart Home Assistant
 
 ### configuration.yaml required part 
 ~~~
 camera:
   - platform: immich_photos
-    url: "http://any.valid.url.with.immich.api.available"
+    url: "any.valid.url.with.immich.api.available"
     api_key: "ani.valid.api.key.provided.by.immich"
+    update_interval:
+      album: 300
+      image: 30
+    shared_albums: True
 ~~~
 
 ## Examples

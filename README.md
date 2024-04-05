@@ -60,7 +60,7 @@ If you want to contribute to this please read the [Contribution guidelines](CONT
 
 ***
 
-[integration_blueprint]: https://github.com/aleksej-kuznecow/ha-immich-photos
+[ha-immich-photos]: https://github.com/aleksej-kuznecow/ha-immich-photos
 [buymecoffee]: https://www.buymeacoffee.com/aleksej.kuznecow
 [buymecoffeebadge]: https://img.shields.io/badge/buy%20me%20a%20coffee-donate-yellow.svg?style=for-the-badge
 [commits-shield]: https://img.shields.io/github/commit-activity/y/aleksej-kuznecow/ha-immich-photos.svg?style=for-the-badge

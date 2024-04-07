@@ -70,7 +70,7 @@ class ImmichPhotosCamera(Camera):
         self._attr_is_on = True
         self._attr_is_recording = False
         self._attr_is_streaming = False
-        self._attr_unique_id = f"ID-media"
+        self._attr_unique_id = "immich_photos"
         self._attr_extra_state_attributes = {}
 
     async def async_camera_image(self, width: int | None = None, height: int | None = None) -> bytes | None:

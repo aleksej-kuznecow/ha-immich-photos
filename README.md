@@ -52,7 +52,7 @@ camera:
 ### Dashboard Picture card
 ~~~
 type: picture-entity
-entity: camera.album_image
+entity: camera.immich_photos
 show_state: false
 show_name: false
 camera_view: auto

@@ -29,14 +29,3 @@ Add your configuration here.
 
 ## Describe the bug
 A clear and concise description of what the bug is.
-
-
-## Debug log
-
-<!-- To enable debug logs check this https://github.com/Daanoz/ha-google-photos#debug-logging -->
-
-```text
-
-Add your logs here.
-
-```

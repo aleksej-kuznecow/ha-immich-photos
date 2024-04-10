@@ -5,7 +5,7 @@ import io
 from datetime import datetime, timedelta
 from PIL import Image
 
-from .api_types import Album, Media
+from .api_types import AlbumItem, MediaItem
 from .api import ImmichAPI
 from .const import (ORIENTATION_NORMAL,
                     ORIENTATION_TOP_TO_LEFT,
@@ -52,10 +52,11 @@ def resize_media(media: bytes, width: int | None = None, height: int | None = No
 
 class ImmichPhotos:
     """ Immich album and media downloader """
-    album: Album = Album()
-    media: Media = Media()
-    current_media_timestamp: datetime | None = None
-    current_album_timestamp: datetime | None = None
+    current_album_item: AlbumItem | None = None
+    current_media_item_list: list[MediaItem] = []
+    current_media_item: MediaItem | None = None
+    current_media_item_timestamp: datetime | None = None
+    current_album_item_timestamp: datetime | None = None
 
     def __init__(self, config: ConfigEntry) -> None:
         self._url = config['url']
@@ -65,56 +66,61 @@ class ImmichPhotos:
 
     async def get_next_album(self) -> None:
         """ Get next album. By default, get random album and only from shared albums """
-        self.album = await ImmichAPI(url=self._url, api_key=self._api_key).get_random_album(shared=self._shared)
+        self.current_album_item = await (ImmichAPI(url=self._url, api_key=self._api_key).
+                                         get_random_album(shared=self._shared))
+        if self.current_album_item is None:
+            _LOGGER.error("There are no albums")
+        else:
+            self.current_media_item_list = await (ImmichAPI(url=self._url, api_key=self._api_key).
+                                                  get_album_media_items(self.current_album_item['id']))
 
     async def get_next_media(self) -> None:
         """ Get next media from album. By default random """
-        if self.album == {}:
+        if self.current_album_item is None:
             _LOGGER.error("Album is not defined")
         else:
-            self.media = await (
-                ImmichAPI(url=self._url, api_key=self._api_key).get_random_media(album_id=self.album['id']))
+            self.current_media_item = await (ImmichAPI(url=self._url, api_key=self._api_key).
+                                             get_random_media(self.current_media_item_list))
 
     async def download(self, size: tuple | None) -> None:
         """ Download image """
-        _current_media = await (ImmichAPI(url=self._url,
-                                          api_key=self._api_key)
-                                .get_media_content(media_id=self.media['id']))
+        _current_media = await (ImmichAPI(url=self._url, api_key=self._api_key).
+                                get_media_content(media_id=self.current_media_item['id']))
 
         # Try to rotate
         try:
             _orientation = None
-            if self.media != {}:
-                _orientation = self.media['mediaMetaData']['orientation']
+            if self.current_media_item is not None:
+                _orientation = self.current_media_item['mediaMetaData']['orientation']
             _current_media = rotate_media(media=_current_media, orientation=_orientation)
         except Exception as err:
-            _LOGGER.error("Unable to rotate media: %s, %s", err, self.media['id'])
+            _LOGGER.error("Unable to rotate media: %s, %s", err, self.current_media_item['id'])
 
         return _current_media
 
     async def update_album(self) -> None:
         """ Update album. If update interval equal 0 sec then update each time """
-        if self.current_album_timestamp is None:
+        if self.current_album_item_timestamp is None:
             await self.get_next_album()
-            self.current_album_timestamp = datetime.now()
-            _LOGGER.debug("First album %s", self.album['id'])
+            self.current_album_item_timestamp = datetime.now()
+            _LOGGER.debug("First album %s", self.current_album_item['id'])
         else:
-            if (datetime.now() - self.current_album_timestamp) > self._update_interval[UPDATE_INTERVAL_ALBUM]:
+            if (datetime.now() - self.current_album_item_timestamp) > self._update_interval[UPDATE_INTERVAL_ALBUM]:
                 await self.get_next_album()
-                self.current_album_timestamp = datetime.now()
-                _LOGGER.debug("Album %s", self.album['id'])
+                self.current_album_item_timestamp = datetime.now()
+                _LOGGER.debug("Album %s", self.current_album_item['id'])
 
     async def update_media(self, size: tuple | None) -> None:
         """ Update media. If update interval not defined then do not update (this parameter is mandatory! """
-        if self.current_media_timestamp is None:
+        if self.current_media_item is None:
             await self.get_next_media()
-            self.current_media_timestamp = datetime.now()
-            _LOGGER.debug("First media %s", self.media['id'])
+            self.current_media_item_timestamp = datetime.now()
+            _LOGGER.debug("First media %s", self.current_media_item['id'])
         else:
-            if (datetime.now() - self.current_media_timestamp) > self._update_interval[UPDATE_INTERVAL_IMAGE]:
+            if (datetime.now() - self.current_media_item_timestamp) > self._update_interval[UPDATE_INTERVAL_IMAGE]:
                 await self.get_next_media()
-                self.current_media_timestamp = datetime.now()
-                _LOGGER.debug("Media %s", self.media['id'])
+                self.current_media_item_timestamp = datetime.now()
+                _LOGGER.debug("Media %s", self.current_media_item['id'])
 
     async def refresh(self, size: tuple | None) -> None:
         """ Refresh data """

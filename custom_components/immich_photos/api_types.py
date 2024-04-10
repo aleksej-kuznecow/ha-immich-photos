@@ -12,7 +12,8 @@ class MediaMetadata(TypedDict):
     cameraMake: Optional[str]
     cameraModel: Optional[str]
 
-class Media(TypedDict):
+
+class MediaItem(TypedDict):
     """ Representation of a media item """
 
     id: str | None
@@ -22,7 +23,7 @@ class Media(TypedDict):
     mediaMetaData: Optional[MediaMetadata]
 
 
-class Album(TypedDict):
+class AlbumItem(TypedDict):
     """ Representation of an album item """
     id: str | None
     title: str | None

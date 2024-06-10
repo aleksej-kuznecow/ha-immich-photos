@@ -1,7 +1,14 @@
 """ API types for integration """
 from typing import TypedDict, Optional
 
+class UserItem(TypedDict):
+    """ User data """
 
+    id: str
+    email: str
+    name: str
+    status: str             
+    
 class MediaMetadata(TypedDict):
     """ Metadata for a media item """
 

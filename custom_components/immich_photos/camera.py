@@ -21,7 +21,6 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
-
 _LOGGER = logging.getLogger("immich_photos")
 
 # Validation of the user's configuration
@@ -44,7 +43,7 @@ def setup_platform(
         add_entities: AddEntitiesCallback,
         discovery_info: DiscoveryInfoType | None = None
 ) -> None:
-    """Set up the Immich Photos platform."""
+    """ Set up the Immich Photos platform """
     # Add devices
     _LOGGER.info(pformat(config))
 
@@ -61,7 +60,7 @@ def setup_platform(
 
 class ImmichPhotosCamera(Camera):
     def __init__(self, camera_config) -> None:
-        """Initialize an ImmichPhotos."""
+        """Initialize an ImmichPhotos"""
         super().__init__()
         self._camera = ImmichPhotos(camera_config)
         self.entity_description = CAMERA_TYPE
@@ -74,12 +73,9 @@ class ImmichPhotosCamera(Camera):
         self._attr_extra_state_attributes = {}
 
     async def async_camera_image(self, width: int | None = None, height: int | None = None) -> bytes | None:
-        """Return a still image response from the camera."""
+        """ Return an image from Immich """
         return await self._camera.refresh(size=(width, height))
 
-    async def async_update(self) -> None:
-        """Update the entity.
-
-        Only used by the generic entity update service.
-        """
+    async def async_update(self):
+        """ Update the entity """
         return await self._camera.refresh()

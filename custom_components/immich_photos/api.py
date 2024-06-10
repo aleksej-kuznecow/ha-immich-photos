@@ -8,25 +8,38 @@ from urllib.parse import urljoin
 
 from random import randint
 
-from .api_types import AlbumItem, MediaItem, MediaMetadata
+from .api_types import UserItem, AlbumItem, MediaItem, MediaMetadata
 from .const import MEDIA_TYPE_IMAGE
 
 _LOGGER = logging.getLogger("immich_photos")
 
 
-def create_album_from_json(request: dict) -> AlbumItem:
-    """" Create Album object by JSON string """
+def create_user_item_from_json(request: dict) -> UserItem | None:
+    """" Create User object item by JSON string """
+    try:
+        return UserItem(id=request['id'],
+                        email=request['email'],
+                        name=request['name'],
+                        status=request['status'])
+    except Exception as expt:
+        _LOGGER.error("User object item created with errors: %s", expt)
+        return None
+
+
+def create_album_item_from_json(request: dict) -> AlbumItem | None:
+    """" Create Album object item by JSON string """
     try:
         return AlbumItem(id=request['id'],
                          title=request['albumName'],
                          shared=request['shared'],
                          mediaItemsCount=request['assetCount'])
-    except Exception:
-        return AlbumItem()
+    except Exception as expt:
+        _LOGGER.error("Album object item created with errors: %s", expt)
+        return None
 
 
-def create_media_from_json(request: dict) -> MediaItem:
-    """"Creates Media object by JSON string"""
+def create_media_item_from_json(request: dict) -> MediaItem | None:
+    """"Creates Media object item by JSON string"""
     try:
         _mediaMetaData = MediaMetadata(creationTime=request['fileCreatedAt'],
                                        width=request['exifInfo']['exifImageWidth'],
@@ -39,8 +52,9 @@ def create_media_from_json(request: dict) -> MediaItem:
                          description=request['exifInfo']['description'],
                          filename=request['originalPath'],
                          mediaMetaData=_mediaMetaData)
-    except Exception:
-        return MediaItem()
+    except Exception as expt:
+        _LOGGER.error("Media object item created with errors: %s", expt)
+        return None
 
 
 class ImmichAPI:
@@ -86,6 +100,12 @@ class ImmichAPI:
 
         return False
 
+    async def get_my_user_info(self) -> UserItem:
+        """" Return current user info """
+        api_path = "/api/user/me"
+
+        return await self._api_wrapper(api_path=api_path)
+
     async def get_all_albums(self, shared=False) -> list:
         """" Return a list of all Albums """
         api_path = "/api/album"
@@ -94,7 +114,7 @@ class ImmichAPI:
 
         _album_list: dict = await self._api_wrapper(api_path=api_path)
         if _album_list:
-            result: list[AlbumItem] = [create_album_from_json(_album) for _album in _album_list]
+            result: list[AlbumItem] = [create_album_item_from_json(_album) for _album in _album_list]
             return result
 
         return []
@@ -115,7 +135,7 @@ class ImmichAPI:
 
         _album_info: dict = await self._api_wrapper(api_path=api_path)
         if _album_info:
-            return create_album_from_json(_album_info)
+            return create_album_item_from_json(_album_info)
         return None
 
     async def get_album_media_items(self, album_id: str | None) -> list:
@@ -128,7 +148,7 @@ class ImmichAPI:
         _album_info: dict = await self._api_wrapper(api_path=api_path)
         if _album_info:
             result: list[MediaItem] = [
-                create_media_from_json(media)
+                create_media_item_from_json(media)
                 for media in _album_info['assets'] if media['type'] == MEDIA_TYPE_IMAGE
             ]
             return result
@@ -142,7 +162,7 @@ class ImmichAPI:
 
         _media_info: dict = await self._api_wrapper(api_path=api_path)
         if _media_info:
-            return create_media_from_json(_media_info)
+            return create_media_item_from_json(_media_info)
         return None
 
     async def get_random_media(self, search_param: str | list[MediaItem] | None) -> MediaItem | None:
@@ -161,7 +181,6 @@ class ImmichAPI:
             return media_item_list[randint(1, len(media_item_list)) - 1]
         else:
             return None
-
 
     async def get_media_content(self, media_id: str) -> bytes | None:
         if media_id is None:

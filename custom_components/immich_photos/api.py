@@ -102,13 +102,13 @@ class ImmichAPI:
 
     async def get_my_user_info(self) -> UserItem:
         """" Return current user info """
-        api_path = "/api/user/me"
+        api_path = "/api/users/me"
 
         return await self._api_wrapper(api_path=api_path)
 
     async def get_all_albums(self, shared=False) -> list:
         """" Return a list of all Albums """
-        api_path = "/api/album"
+        api_path = "/api/albums"
         if shared:
             api_path = api_path + "?shared=true"
 
@@ -131,7 +131,7 @@ class ImmichAPI:
         """Get Album info by ID"""
         if album_id is None:
             return None
-        api_path = f"/api/album/{album_id}"
+        api_path = f"/api/albums/{album_id}"
 
         _album_info: dict = await self._api_wrapper(api_path=api_path)
         if _album_info:
@@ -143,7 +143,7 @@ class ImmichAPI:
         if album_id is None:
             return []
 
-        api_path = f"/api/album/{album_id}"
+        api_path = f"/api/albums/{album_id}"
 
         _album_info: dict = await self._api_wrapper(api_path=api_path)
         if _album_info:
@@ -185,7 +185,7 @@ class ImmichAPI:
     async def get_media_content(self, media_id: str) -> bytes | None:
         if media_id is None:
             return None
-        api_path = f"/api/asset/file/{media_id}"
+        api_path = f"/api/assets/{media_id}/thumbnail?size=fullsize"
 
         _media_content: bytes = await self._api_wrapper(api_path=api_path, return_json=False)
         if _media_content:
